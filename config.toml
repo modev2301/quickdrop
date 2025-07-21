@@ -1,0 +1,18 @@
+[server]
+address = "0.0.0.0"
+port = 8080
+max_clients = 10
+enable_progress_bar = true
+parallel_streams = 4
+buffer_size = 65536
+auto_chunk_size = false
+resume_directory = "./resume"    
+
+[client]
+server_address = "172.18.5.29:8080"
+enable_progress_bar = true
+parallel_streams = 4
+buffer_size = 65536
+auto_chunk_size = false
+max_speed_mbps = 1000.0        
+resume_directory = "./resume"    
