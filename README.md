@@ -43,7 +43,7 @@ Compare that to your typical rsync or scp transfer. We're talking orders of magn
 
 ### Install
 ```bash
-git clone https://github.com/yourusername/quickdrop.git
+git clone https://github.com/modev2301/quickdrop.git
 cd quickdrop
 cargo build --release
 ```
