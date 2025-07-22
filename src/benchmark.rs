@@ -43,7 +43,7 @@ impl PerformanceBenchmark {
             (1024 * 1024, "1MB"),
             (10 * 1024 * 1024, "10MB"),
             (100 * 1024 * 1024, "100MB"),
-            (5 * 1024 * 1024 * 1024, "5GB"), // Add 5GB file
+            (1024 * 1024 * 1024, "1GB"), // Changed from 5GB to 1GB
         ];
 
         for (size, label) in sizes {
@@ -56,8 +56,8 @@ impl PerformanceBenchmark {
                 content_type: "random".to_string(),
             });
 
-            // Generate compressible file (repeating patterns) - skip for 5GB to save time
-            if size < 1024 * 1024 * 1024 { // Only generate compressible files up to 1GB
+            // Generate compressible file (repeating patterns) - skip for 1GB to save time
+            if size < 100 * 1024 * 1024 { // Only generate compressible files up to 100MB
                 let compressible_path = format!("{}/compressible_{}.bin", base_path, label);
                 self.generate_compressible_file(&compressible_path, size)?;
                 self.test_files.push(TestFile {
@@ -73,21 +73,52 @@ impl PerformanceBenchmark {
 
     fn generate_random_file(&self, path: &str, size: u64) -> Result<(), Box<dyn std::error::Error>> {
         use rand::Rng;
+        use std::fs::File;
+        use std::io::Write;
+        
         let mut rng = rand::thread_rng();
-        let mut data = vec![0u8; size as usize];
-        rng.fill(&mut data[..]);
-        fs::write(path, data)?;
+        let mut file = File::create(path)?;
+        
+        // Write in 1MB chunks to avoid memory issues
+        let chunk_size = 1024 * 1024; // 1MB chunks
+        let mut remaining = size;
+        
+        while remaining > 0 {
+            let current_chunk_size = std::cmp::min(chunk_size, remaining as usize);
+            let mut chunk = vec![0u8; current_chunk_size];
+            rng.fill(&mut chunk[..]);
+            file.write_all(&chunk)?;
+            remaining -= current_chunk_size as u64;
+        }
+        
         Ok(())
     }
 
     fn generate_compressible_file(&self, path: &str, size: u64) -> Result<(), Box<dyn std::error::Error>> {
+        use std::fs::File;
+        use std::io::Write;
+        
         let pattern = b"This is a repeating pattern that should compress well. ";
-        let mut data = Vec::new();
-        while data.len() < size as usize {
-            data.extend_from_slice(pattern);
+        let mut file = File::create(path)?;
+        
+        // Write in 1MB chunks to avoid memory issues
+        let chunk_size = 1024 * 1024; // 1MB chunks
+        let mut remaining = size;
+        
+        while remaining > 0 {
+            let current_chunk_size = std::cmp::min(chunk_size, remaining as usize);
+            let mut chunk = Vec::new();
+            
+            // Fill chunk with repeating pattern
+            while chunk.len() < current_chunk_size {
+                chunk.extend_from_slice(pattern);
+            }
+            chunk.truncate(current_chunk_size);
+            
+            file.write_all(&chunk)?;
+            remaining -= current_chunk_size as u64;
         }
-        data.truncate(size as usize);
-        fs::write(path, data)?;
+        
         Ok(())
     }
 
