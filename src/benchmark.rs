@@ -43,6 +43,7 @@ impl PerformanceBenchmark {
             (1024 * 1024, "1MB"),
             (10 * 1024 * 1024, "10MB"),
             (100 * 1024 * 1024, "100MB"),
+            (5 * 1024 * 1024 * 1024, "5GB"), // Add 5GB file
         ];
 
         for (size, label) in sizes {
@@ -55,14 +56,16 @@ impl PerformanceBenchmark {
                 content_type: "random".to_string(),
             });
 
-            // Generate compressible file (repeating patterns)
-            let compressible_path = format!("{}/compressible_{}.bin", base_path, label);
-            self.generate_compressible_file(&compressible_path, size)?;
-            self.test_files.push(TestFile {
-                path: compressible_path,
-                size,
-                content_type: "compressible".to_string(),
-            });
+            // Generate compressible file (repeating patterns) - skip for 5GB to save time
+            if size < 1024 * 1024 * 1024 { // Only generate compressible files up to 1GB
+                let compressible_path = format!("{}/compressible_{}.bin", base_path, label);
+                self.generate_compressible_file(&compressible_path, size)?;
+                self.test_files.push(TestFile {
+                    path: compressible_path,
+                    size,
+                    content_type: "compressible".to_string(),
+                });
+            }
         }
 
         Ok(())
@@ -220,12 +223,18 @@ impl PerformanceBenchmark {
             all_results.push(result);
         }
         
-        // Benchmark against external tools (if available)
-        if let Ok(result) = self.benchmark_rsync(&self.test_files[0].path, &format!("{}/rsync_test", test_dir)) {
+        // Benchmark against external tools using larger files for more realistic results
+        // Find a larger file (100MB or 5GB) for rsync/scp tests
+        let large_file = self.test_files.iter()
+            .find(|f| f.size >= 100 * 1024 * 1024) // 100MB or larger
+            .or_else(|| self.test_files.first())
+            .unwrap();
+        
+        if let Ok(result) = self.benchmark_rsync(&large_file.path, &format!("{}/rsync_test", test_dir)) {
             all_results.push(result);
         }
         
-        if let Ok(result) = self.benchmark_scp(&self.test_files[0].path, &format!("{}/scp_test", test_dir)) {
+        if let Ok(result) = self.benchmark_scp(&large_file.path, &format!("{}/scp_test", test_dir)) {
             all_results.push(result);
         }
         
